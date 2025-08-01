@@ -5,7 +5,7 @@ def main():
     game = Game_Manager()
     
     #game setup
-    game.add_player()
+    game.handle_new_player()
     for i in range(game.player_count):
         p = game.players[i]
         if i == 0:

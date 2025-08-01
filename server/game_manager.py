@@ -11,7 +11,7 @@ class Game_Manager:
         self.setup_deck()
         self.players = []
         self.player_count = 0
-        self.add_player() #add dealer
+        self.add_player() #Dealer
         self.dealer = self.players[0]
           
     def setup_deck(self):
@@ -23,22 +23,38 @@ class Game_Manager:
         
         random.shuffle(self.deck)
     
+    #Handle events
+    def handle_new_player(self):
+        player = self.add_player()
+        return [player.hand, self.dealer.hand[0]]
+    
+    def handle_hit(self, playerID):
+        player = self.get_player_from_playerID(playerID)
+        card = self.deal_card(playerID)
+        return [card, player.score, player.is_bust]
+    
+    #def handle_stand(self): 
+    #def handle_result(self): return [outcome, self.dealer.hand]
+        
     #Gameplay
     def add_player(self):
         player = Player(self.player_count)
         self.player_count += 1
         self.players.append(player)
         self.deal_card(player.playerID, 2)
+        return player
         
     def deal_card(self, playerID, number_of_cards):
         player = self.get_player_from_playerID(playerID)
-        if player:
-            while number_of_cards > 0:
-                card = self.deck.pop()
-                player.add_card(card)
-                number_of_cards -= 1
-        else:
+        if not player:
             return "No Player Found"
+        
+        card = ""
+        while number_of_cards > 0:
+            card = self.deck.pop()
+            player.add_card(card)
+            number_of_cards -= 1
+        return card
             
     def play_dealer_turn(self):
         while self.dealer.score < 17:
@@ -49,17 +65,6 @@ class Game_Manager:
         for player in self.players:
             player.reset()
             self.deal_card(player.playerID, 2)
-           
-    #Game state
-    def get_dealer_hand(self):
-        return self.dealer.hand
-    
-    def get_player_state(self, playerID):
-        player = self.get_player_from_playerID(playerID)
-        if player:
-            return [player.hand, player.score, player.is_bust]
-        else:
-            return "No Player Found"
         
     #Helpers
     def get_player_from_playerID(self, playerID):
