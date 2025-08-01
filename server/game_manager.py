@@ -23,39 +23,49 @@ class Game_Manager:
         
         random.shuffle(self.deck)
     
+    #Gameplay
     def add_player(self):
         player = Player(self.player_count)
         self.player_count += 1
-        self.deal_card(player, 2)
         self.players.append(player)
+        self.deal_card(player.playerID, 2)
         
-    def deal_card(self, player, number_of_cards):
-        for i in range(number_of_cards):
-            card = self.deck.pop()
-            player.add_card(card)
+    def deal_card(self, playerID, number_of_cards):
+        player = self.get_player_from_playerID(playerID)
+        if player:
+            while number_of_cards > 0:
+                card = self.deck.pop()
+                player.add_card(card)
+                number_of_cards -= 1
+        else:
+            return "No Player Found"
             
     def play_dealer_turn(self):
         while self.dealer.score < 17:
-            self.deal_card(self.dealer, 1)
+            self.deal_card(self.dealer.playerID, 1)
     
     def reset_game(self):
         self.setup_deck()
         for player in self.players:
             player.reset()
-            self.deal_card(player, 2)
-            
+            self.deal_card(player.playerID, 2)
+           
+    #Game state
+    def get_dealer_hand(self):
+        return self.dealer.hand
+    
+    def get_player_state(self, playerID):
+        player = self.get_player_from_playerID(playerID)
+        if player:
+            return [player.hand, player.score, player.is_bust]
+        else:
+            return "No Player Found"
+        
+    #Helpers
     def get_player_from_playerID(self, playerID):
         for player in self.players:
             if player.playerID == playerID:
                 return player
         return None
-            
-    def get_dealer_hand(self):
-        return self.dealer.hand
-    
-    def get_player_hand(self, playerID):
-        player = self.get_player_from_playerID(playerID)
-        return player.hand
-        
         
     
