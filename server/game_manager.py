@@ -13,6 +13,7 @@ class Game_Manager:
         self.player_count = 0
         self.add_player() #Dealer
         self.dealer = self.players[0]
+        self.current_turn_index = 1
           
     def setup_deck(self):
         self.deck.clear()
@@ -28,13 +29,45 @@ class Game_Manager:
         player = self.add_player()
         return [player.hand, self.dealer.hand[0]]
     
-    def handle_hit(self, playerID):
-        player = self.get_player_from_playerID(playerID)
-        card = self.deal_card(playerID)
+    def handle_hit(self):
+        player = self.players[self.current_turn_index]
+        card = self.deal_card(player.playerID, 1)
+        if player.is_bust:
+            self.handle_stand()
         return [card, player.score, player.is_bust]
     
-    #def handle_stand(self): 
-    #def handle_result(self): return [outcome, self.dealer.hand]
+    def handle_stand(self): 
+        self.current_turn_index += 1
+        if self.current_turn_index > self.player_count - 1:
+            self.current_turn_index = 0
+
+    # Returns a dictionary: {playerID: outcome, playerID: outcome, ...}
+    # Does not include dealer
+    def handle_result(self):
+        results = {}
+        for i in range(self.player_count - 1):
+            current_player = self.players[i+1]
+            if current_player.is_bust:
+                outcome = "You lose!" 
+            else:
+                if self.dealer.is_bust:
+                    outcome = "You win!"
+                else:
+                    if current_player.is_blackjack:
+                        if self.dealer.is_blackjack:
+                            outcome = "Push!"
+                        else:
+                            outcome = "You win!"
+                    else:
+                        if self.dealer.is_blackjack or self.dealer.score > current_player.score:
+                            outcome = "You lose!"
+                        elif self.dealer.score == current_player.score:
+                            outcome = "Push!"
+                        else:
+                            outcome = "You win!"
+            results[current_player.playerID] = outcome
+
+        return results
         
     #Gameplay
     def add_player(self):
@@ -62,6 +95,7 @@ class Game_Manager:
     
     def reset_game(self):
         self.setup_deck()
+        self.current_turn_index = 1
         for player in self.players:
             player.reset()
             self.deal_card(player.playerID, 2)
