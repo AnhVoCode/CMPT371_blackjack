@@ -19,12 +19,12 @@ Sent immediately after establishing a connection to identify the player.
 ---
 
 ### `action`
-Sent when the player takes an action during their turn.
+Sent when the player takes an action during their turn (hit or stand)
 
 ```json
 {
   "type": "action",
-  "action": "hit" | "stand"
+  "action": "hit"
 }
 ```
 
