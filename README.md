@@ -40,7 +40,7 @@ This repository contains the source code and documentation for a multiplayer Bla
 
    ```bash
    cd client
-   python main.py <SERVER_IP> 8080 ```````
+   python main.py <SERVER_IP> 8080
 
   > _Replace <SERVER_IP> with the server’s LAN or public IP_
 
