@@ -1,92 +1,190 @@
-# Message Format
+# Blackjack Messaging Protocol (Application Layer)
 
-This document defines the **JSON message formats** exchanged between the **client** and the **server/Game Manager** in a networked Blackjack game.
+The client communicates with a Blackjack server using a custom **JSON-based application-layer messaging protocol** over **TCP**.
 
 ---
 
-## 1. Game State (`type: "state"`)
+## Client-to-Server Messages
 
-**Sent by server** to initialize the game for a player.
+### `register`
+Sent immediately after establishing a connection to identify the player.
 
 ```json
 {
-  "type": "state",
-  "player_hand": ["A♠", "10♦"],
-  "dealer_card": "8♣"
+  "type": "register",
+  "name": "PlayerName"
 }
 ```
 
-| Field         | Type     | Description                           |
-|---------------|----------|---------------------------------------|
-| `type`        | string   | Always `"state"`                      |
-| `player_hand` | string[] | Player’s initial two cards            |
-| `dealer_card` | string   | Only the dealer's **first** visible card |
-
 ---
 
-## 2. Player Action (`type: "action"`)
-
-**Sent by client** when the player takes an action.
+### `action`
+Sent when the player takes an action during their turn.
 
 ```json
 {
   "type": "action",
-  "action": "hit"
+  "action": "hit" | "stand"
 }
 ```
 
-| Field     | Type   | Description              |
-|-----------|--------|--------------------------|
-| `type`    | string | Always `"action"`        |
-| `action`  | string | `"hit"` or `"stand"`     |
+---
+
+### `bet`
+Sent when the player bets an amount of money.
+
+```json
+{
+  "type": "bet",
+  "amount": 5
+}
+```
 
 ---
 
-## 3. Update After Hit (`type: "update"`)
+## Server-to-Client Messages
 
-**Sent by server** after player chooses `"hit"`.
+### `lobby`
+Displays current players in the lobby.
+
+```json
+{
+  "type": "lobby",
+  "all_players": [
+    {
+      "player_id": "1",
+      "player_name": "PlayerName",
+      "hand": ["A", "8"],
+      "status": "playing",
+      "bet": "$10",
+      "balance": "$100"
+    }
+  ]
+}
+```
+
+---
+
+### `bet_phase`
+Indicates that the betting phase is active.
+
+```json
+{
+  "type": "bet_phase",
+  "time": "10",
+  "all_players": [...]
+}
+```
+
+---
+
+### `state`
+Initializes a round and sets up hands.
+
+```json
+{
+  "type": "state",
+  "player_id": "1",
+  "player_name": "PlayerName",
+  "your_hand": ["A", "8"],
+  "dealer_card": "Q",
+  "all_players": [...]
+}
+```
+
+---
+
+### `status`
+Indicates a player's current status in the game (e.g., `waiting`, `skipped`, `playing`, `stood`, `busted`, `finished`, `disconnected`).
+
+```json
+{
+  "type": "status",
+  "status": "waiting"
+}
+```
+
+---
+
+### `turn`
+Indicates it is a specific player's turn.
+
+```json
+{
+  "type": "turn",
+  "current_player_id": "1",
+  "current_player_name": "PlayerName",
+  "all_players": [...]
+}
+```
+
+---
+
+### `update`
+Updates a player's hand and state after taking an action.
 
 ```json
 {
   "type": "update",
-  "card": "5♠",
-  "new_score": 26,
-  "status": "bust"
+  "your_hand": ["A", "8"],
+  "card": "2",
+  "new_score": 21,
+  "status": "ok",
+  "dealer_card": "Q",
+  "all_players": [...]
 }
 ```
 
-| Field        | Type   | Description                              |
-|--------------|--------|------------------------------------------|
-| `type`       | string | Always `"update"`                        |
-| `card`       | string | The card the player just drew            |
-| `new_score`  | int    | The player's updated score               |
-| `status`     | string | `"ok"` or `"bust"`                       |
+---
+
+### `skipped`
+Indicates a player was skipped for not placing a bet within the time limit (10s).
+
+```json
+{
+  "type": "skipped",
+  "player_id": "1",
+  "message": "No bet placed; skipped this round.",
+  "balance": "100",
+  "all_players": [...]
+}
+```
 
 ---
 
-## 4. Final Result (`type: "result"`)
+### `round_skipped`
+Indicates the round was skipped because no players placed a bet in time.
 
-**Sent by server** when game ends (either by bust or stand).
+```json
+{
+  "type": "round_skipped",
+  "message": "No bets were placed. Round skipped.",
+  "all_players": [...]
+}
+```
+
+---
+
+### `result`
+Shows the final result of a round (win, lose, push)
 
 ```json
 {
   "type": "result",
-  "outcome": "Dealer wins!",
-  "dealer_hand": ["8♣", "10♥"]
+  "outcome": "win",
+  "dealer_hand": ["Q", "9"],
+  "your_hand": ["A", "K"],
+  "balance": "120",
+  "bet": 10,
+  "player_id": "1",
+  "all_players": [...]
 }
 ```
 
-| Field         | Type     | Description                       |
-|---------------|----------|-----------------------------------|
-| `type`        | string   | Always `"result"`                 |
-| `outcome`     | string   | Message: `"You win!"` etc.        |
-| `dealer_hand` | string[] | The full dealer hand              |
-
 ---
 
-## 5. Error (`type: "error"`)
-
-**Sent by server** when an invalid action or message is received.
+### `error`
+Indicates a problem with an action or invalid messages.
 
 ```json
 {
@@ -95,16 +193,19 @@ This document defines the **JSON message formats** exchanged between the **clien
 }
 ```
 
-| Field     | Type   | Description                  |
-|-----------|--------|------------------------------|
-| `type`    | string | Always `"error"`             |
-| `message` | string | Description of the problem   |
-
 ---
 
-## Notes
+## 🔄 Typical Game Flow
 
-- All messages are encoded in **UTF-8 JSON**.
-- Card format: `"RankSuit"` — e.g., `"A♠"`, `"10♦"`, `"K♣"`.
-- After a `"result"` or `"error"` message, the server may close the connection.
-- Clients must handle unexpected or malformed messages gracefully.
+```
+[Client] → register  
+[Server] → lobby  
+[Server] → bet_phase  
+[Client] → bet  
+[Server] → state  
+[Server] → turn  
+[Client] → action (hit/stand)  
+[Server] → update  
+     ↻ (loop 6–8 until all players are done)  
+[Server] → result  
+```
